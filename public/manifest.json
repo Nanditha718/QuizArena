@@ -1,0 +1,19 @@
+{
+  "name": "Quiz Arena",
+  "short_name": "Quiz Arena",
+  "description": "A two-player quiz challenge",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#10172f",
+  "theme_color": "#20294a",
+  "icons": [
+  {
+    "src": "/icon-512.png",
+    "sizes": "512x512",
+    "type": "image/png",
+    "purpose": "any"
+  }
+]
+}

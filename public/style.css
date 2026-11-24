@@ -1,0 +1,318 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: #080d1b;
+    color: white;
+    min-height: 100vh;
+}
+
+.container {
+    width: 90%;
+    max-width: 1100px;
+    margin: auto;
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 0;
+    border-bottom: 1px solid #26304a;
+}
+
+nav h2 {
+    color: #61e7ff;
+    letter-spacing: 2px;
+}
+
+nav span {
+    color: #aab5ce;
+}
+
+main {
+    padding: 75px 0;
+    text-align: center;
+}
+
+.tag {
+    color: #61e7ff;
+    letter-spacing: 4px;
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+
+.hero h1 {
+    font-size: clamp(42px, 8vw, 75px);
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.hero h1 span {
+    color: #61e7ff;
+}
+
+.description {
+    color: #aab5ce;
+    line-height: 1.7;
+    max-width: 500px;
+    margin: 0 auto 30px;
+}
+
+button {
+    background: #61e7ff;
+    color: #080d1b;
+    border: none;
+    padding: 16px 35px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: white;
+    transform: translateY(-3px);
+}
+
+.info {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 65px;
+}
+
+.info-card {
+    background: #121b30;
+    padding: 30px 15px;
+    border: 1px solid #26304a;
+    border-radius: 12px;
+}
+
+.info-card h2 {
+    font-size: 35px;
+    margin-bottom: 15px;
+}
+
+.info-card h3 {
+    margin-bottom: 10px;
+}
+
+.info-card p {
+    color: #aab5ce;
+    font-size: 14px;
+}
+
+footer {
+    text-align: center;
+    color: #78849e;
+    padding: 25px;
+    border-top: 1px solid #26304a;
+}
+
+@media (max-width: 650px) {
+    .info {
+        grid-template-columns: 1fr;
+    }
+
+    nav {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    main {
+        padding: 50px 0;
+    }
+}
+
+.registration-box {
+    width: 100%;
+    max-width: 420px;
+    margin: 30px auto;
+    padding: 30px;
+    background: #121b30;
+    border: 1px solid #26304a;
+    border-radius: 15px;
+}
+
+.registration-box input {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 18px;
+    background: #080d1b;
+    border: 1px solid #36415c;
+    border-radius: 8px;
+    color: white;
+    font-size: 15px;
+    outline: none;
+}
+
+.registration-box input:focus {
+    border-color: #61e7ff;
+}
+
+.registration-box button {
+    width: 100%;
+}
+
+.back-button {
+    margin-top: 15px;
+    background: transparent;
+    color: #61e7ff;
+    border: 1px solid #61e7ff;
+}
+
+#message {
+    margin-top: 15px;
+    color: #61e7ff;
+}
+#waitingMessage {
+    color: #61e7ff;
+    margin-top: 25px;
+    font-size: 17px;
+}
+
+#displayRoomCode {
+    color: #61e7ff;
+    letter-spacing: 8px;
+    margin: 15px 0;
+}
+
+#waitingName {
+    color: #61e7ff;
+}
+.quiz-info {
+    background: #080d1b;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.quiz-info h2 {
+    color: #61e7ff;
+    font-size: 40px;
+    margin: 10px 0;
+}
+
+#questionText {
+    margin: 25px 0;
+    line-height: 1.5;
+}
+
+#answerOptions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.answer-option {
+    width: 100%;
+    background: #1c2942;
+    color: white;
+    border: 1px solid #36415c;
+    padding: 18px;
+}
+
+.answer-option:hover {
+    background: #61e7ff;
+    color: #080d1b;
+}
+
+#quizMessage {
+    color: #61e7ff;
+    margin-top: 20px;
+}
+
+@media (max-width: 500px) {
+    #answerOptions {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ===== WINNER ANNOUNCEMENT ===== */
+
+#leaderboardScreen {
+    text-align: center;
+    padding: 30px 15px;
+}
+
+#winnerName {
+    font-size: clamp(35px, 7vw, 65px);
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    margin: 25px 0;
+    animation: winnerPop 1s ease;
+}
+
+#winnerMessage {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ff4d6d;
+}
+
+@keyframes winnerPop {
+    0% { transform: scale(0.3); opacity: 0; }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ===== LEADERBOARD TABLE ===== */
+
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 25px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.result-table th,
+.result-table td {
+    padding: 16px 10px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.result-table th {
+    background: #20294a;
+    color: white;
+}
+
+.result-table .first-place {
+    background: #fff0b3;
+    color: #704b00;
+    font-weight: bold;
+}
+
+.result-table .second-place {
+    background: #e8e8ef;
+    color: #333;
+    font-weight: bold;
+}
+
+/* ===== CONFETTI CELEBRATION ===== */
+
+.confetti-piece {
+    position: fixed;
+    top: -15px;
+    width: 10px;
+    height: 15px;
+    z-index: 9999;
+    pointer-events: none;
+    animation: confettiFall 4s linear forwards;
+}
+
+@keyframes confettiFall {
+    to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+    }
+}
