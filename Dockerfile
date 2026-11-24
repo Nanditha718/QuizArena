@@ -8,4 +8,4 @@ RUN javac --add-modules jdk.httpserver QuizServer.java
 
 EXPOSE 8080
 
-CMD["java","--add-modules","jdk.httpserver","QuizServer"]
+CMD ["java","--add-modules","jdk.httpserver","QuizServer"]
