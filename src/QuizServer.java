@@ -1,3 +1,4 @@
+
 import com.sun.net.httpserver.*;
 import java.net.*;
 import java.nio.file.*;
@@ -11,35 +12,41 @@ public class QuizServer {
     static class Room {
         List<String> players = new ArrayList<>();
         Set<String> departed = new HashSet<>();
+        Set<String> resultsViewed = new HashSet<>();
         Map<String, Integer> scores = new ConcurrentHashMap<>();
         Map<String, Long> times = new ConcurrentHashMap<>();
-        Set<String> resultsViewed = new HashSet<>();
         boolean started = false;
     }
 
-    static Room room = new Room();
+    static volatile Room room = new Room();
 
     public static void main(String[] args) throws Exception {
 
-       int port = Integer.parseInt(System.getenv().getOrDefault("PORT","8080"));
-       HttpServer server=HttpServer.create(new InetSocketAddress("0.0.0.0",port),0);
+        int port = Integer.parseInt(
+            System.getenv().getOrDefault("PORT", "8080")
+        );
+
+        HttpServer server = HttpServer.create(
+            new InetSocketAddress("0.0.0.0", port), 0
+        );
 
         // PLAYER JOIN
         server.createContext("/api/join", exchange -> {
 
             Map<String, String> data = readForm(exchange);
-
             String name = data.getOrDefault("playerName", "").trim();
 
             boolean success = false;
             String message = "";
+            int playerCount;
+            boolean started;
 
             synchronized (room) {
 
                 if (name.isEmpty()) {
                     message = "Please enter a player name.";
 
-                } else if (room.players.size() == 2) {
+                } else if (room.players.size() >= 2) {
                     message = "The game is full.";
 
                 } else if (!room.scores.isEmpty()
@@ -50,7 +57,6 @@ public class QuizServer {
                     message = "This player name is already used.";
 
                 } else {
-
                     room.players.add(name);
                     success = true;
 
@@ -58,12 +64,15 @@ public class QuizServer {
                         room.started = true;
                     }
                 }
+
+                playerCount = room.players.size();
+                started = room.started;
             }
 
             String response =
                 "{\"success\":" + success
-                + ",\"playerCount\":" + room.players.size()
-                + ",\"started\":" + room.started
+                + ",\"playerCount\":" + playerCount
+                + ",\"started\":" + started
                 + ",\"message\":\"" + jsonEscape(message) + "\"}";
 
             sendJson(exchange, response);
@@ -72,124 +81,102 @@ public class QuizServer {
         // CHECK GAME STATUS
         server.createContext("/api/status", exchange -> {
 
-            synchronized (room) {
+            String response;
 
-                String response =
+            synchronized (room) {
+                response =
                     "{\"playerCount\":" + room.players.size()
                     + ",\"players\":" + toJson(room.players)
                     + ",\"started\":" + room.started + "}";
-
-                sendJson(exchange, response);
             }
+
+            sendJson(exchange, response);
         });
 
         // SUBMIT PLAYER SCORE
-       // GET FINAL RESULTS
-server.createContext("/api/results", exchange -> {
-
-    Map<String, String> data = readForm(exchange);
-    String name = data.getOrDefault("playerName", "");
-
-    synchronized (room) {
-
-        Room currentRoom = room;
-
-        if (currentRoom.scores.size() < 2
-                || !currentRoom.players.contains(name)) {
-            sendJson(exchange, "{\"ready\":false}");
-            return;
-        }
-
-        StringBuilder result = new StringBuilder();
-        result.append("{\"ready\":true,\"players\":[");
-
-        boolean first = true;
-
-        for (String player : currentRoom.players) {
-
-            if (!first) result.append(",");
-            first = false;
-
-            result.append("{\"name\":\"")
-                .append(jsonEscape(player))
-                .append("\",\"score\":")
-                .append(currentRoom.scores.get(player))
-                .append(",\"time\":")
-                .append(currentRoom.times.get(player))
-                .append("}");
-        }
-
-        result.append("]}");
-
-        currentRoom.resultsViewed.add(name);
-
-        boolean resetRoom =
-            currentRoom.resultsViewed.containsAll(currentRoom.players);
-
-        sendJson(exchange, result.toString());
-
-        if (resetRoom && room == currentRoom) {
-            room = new Room();
-            System.out.println("Quiz Arena room reset!");
-        }
-    }
-});
-        // GET FINAL RESULTS
-        server.createContext("/api/results", exchange -> {
-
-            synchronized (room) {
-
-                if (room.scores.size() < 2) {
-                    sendJson(exchange, "{\"ready\":false}");
-                    return;
-                }
-
-                StringBuilder result = new StringBuilder();
-
-                result.append("{\"ready\":true,\"players\":[");
-
-                boolean first = true;
-
-                for (String name : room.players) {
-
-                    if (!first) result.append(",");
-                    first = false;
-
-                    result.append("{\"name\":\"")
-                        .append(jsonEscape(name))
-                        .append("\",\"score\":")
-                        .append(room.scores.get(name))
-                        .append(",\"time\":")
-                        .append(room.times.get(name))
-                        .append("}");
-                }
-
-                result.append("]}");
-
-                sendJson(exchange, result.toString());
-            }
-        });
-
-        // PLAYER RETURNS HOME
-        server.createContext("/api/leave", exchange -> {
+        server.createContext("/api/finish", exchange -> {
 
             Map<String, String> data = readForm(exchange);
 
             String name = data.getOrDefault("playerName", "");
 
+            int playerScore = Integer.parseInt(
+                data.getOrDefault("score", "0")
+            );
+
+            long playerTime = Long.parseLong(
+                data.getOrDefault("time", "0")
+            );
+
+            boolean success = false;
+
             synchronized (room) {
 
-                if (room.players.contains(name)) {
-                    room.departed.add(name);
-                }
-
-                // Reset only after both players have returned home
-                if (room.players.size() == 2
-                        && room.departed.size() == 2) {
-
-                    room = new Room();
+                if (room.started && room.players.contains(name)) {
+                    room.scores.put(name, playerScore);
+                    room.times.put(name, playerTime);
+                    success = true;
                 }
             }
+
+            sendJson(exchange, "{\"success\":" + success + "}");
+        });
+
+        // GET FINAL RESULTS AND AUTOMATICALLY RESET ROOM
+        server.createContext("/api/results", exchange -> {
+
+            Map<String, String> data = readForm(exchange);
+            String name = data.getOrDefault("playerName", "");
+
+            synchronized (room) {
+
+                Room currentRoom = room;
+
+                if (currentRoom.scores.size() < 2
+                        || !currentRoom.players.contains(name)) {
+                    sendJson(exchange, "{\"ready\":false}");
+                    return;
+                }
+
+                StringBuilder result = new StringBuilder();
+                result.append("{\"ready\":true,\"players\":[");
+
+                boolean first = true;
+
+                for (String player : currentRoom.players) {
+
+                    if (!first) result.append(",");
+                    first = false;
+
+                    result.append("{\"name\":\"")
+                        .append(jsonEscape(player))
+                        .append("\",\"score\":")
+                        .append(currentRoom.scores.get(player))
+                        .append(",\"time\":")
+                        .append(currentRoom.times.get(player))
+                        .append("}");
+                }
+
+                result.append("]}");
+
+                currentRoom.resultsViewed.add(name);
+
+                boolean resetRoom =
+                    currentRoom.resultsViewed.containsAll(
+                        currentRoom.players
+                    );
+
+                sendJson(exchange, result.toString());
+
+                if (resetRoom && room == currentRoom) {
+                    room = new Room();
+                    System.out.println("Quiz Arena room reset!");
+                }
+            }
+        });
+
+        // PLAYER RETURNS HOME
+        server.createContext("/api/leave", exchange -> {
 
             sendJson(exchange, "{\"success\":true}");
         });
@@ -254,7 +241,6 @@ server.createContext("/api/results", exchange -> {
             String[] pair = item.split("=", 2);
 
             if (pair.length == 2) {
-
                 data.put(
                     URLDecoder.decode(pair[0], "UTF-8"),
                     URLDecoder.decode(pair[1], "UTF-8")
