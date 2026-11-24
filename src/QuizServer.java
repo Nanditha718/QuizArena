@@ -20,8 +20,8 @@ public class QuizServer {
 
     public static void main(String[] args) throws Exception {
 
-       int port = Integer.parselnt(System.getenv().getOrDefault("PORT","8080"));
-       HttpServer server=HttpServer.create(new InetSocketAddress("0.0.0.",port),0);
+       int port = Integer.parseInt(System.getenv().getOrDefault("PORT","8080"));
+       HttpServer server=HttpServer.create(new InetSocketAddress("0.0.0.0",port),0);
 
         // PLAYER JOIN
         server.createContext("/api/join", exchange -> {
