@@ -13,6 +13,7 @@ public class QuizServer {
         Set<String> departed = new HashSet<>();
         Map<String, Integer> scores = new ConcurrentHashMap<>();
         Map<String, Long> times = new ConcurrentHashMap<>();
+        Set<String> resultsViewed = new HashSet<>();
         boolean started = false;
     }
 
@@ -83,36 +84,56 @@ public class QuizServer {
         });
 
         // SUBMIT PLAYER SCORE
-        server.createContext("/api/finish", exchange -> {
+       // GET FINAL RESULTS
+server.createContext("/api/results", exchange -> {
 
-            Map<String, String> data = readForm(exchange);
+    Map<String, String> data = readForm(exchange);
+    String name = data.getOrDefault("playerName", "");
 
-            String name = data.getOrDefault("playerName", "");
+    synchronized (room) {
 
-            int playerScore = Integer.parseInt(
-                data.getOrDefault("score", "0")
-            );
+        Room currentRoom = room;
 
-            long playerTime = Long.parseLong(
-                data.getOrDefault("time", "0")
-            );
+        if (currentRoom.scores.size() < 2
+                || !currentRoom.players.contains(name)) {
+            sendJson(exchange, "{\"ready\":false}");
+            return;
+        }
 
-            boolean success = false;
+        StringBuilder result = new StringBuilder();
+        result.append("{\"ready\":true,\"players\":[");
 
-            synchronized (room) {
+        boolean first = true;
 
-                if (room.started && room.players.contains(name)) {
+        for (String player : currentRoom.players) {
 
-                    room.scores.put(name, playerScore);
-                    room.times.put(name, playerTime);
+            if (!first) result.append(",");
+            first = false;
 
-                    success = true;
-                }
-            }
+            result.append("{\"name\":\"")
+                .append(jsonEscape(player))
+                .append("\",\"score\":")
+                .append(currentRoom.scores.get(player))
+                .append(",\"time\":")
+                .append(currentRoom.times.get(player))
+                .append("}");
+        }
 
-            sendJson(exchange, "{\"success\":" + success + "}");
-        });
+        result.append("]}");
 
+        currentRoom.resultsViewed.add(name);
+
+        boolean resetRoom =
+            currentRoom.resultsViewed.containsAll(currentRoom.players);
+
+        sendJson(exchange, result.toString());
+
+        if (resetRoom && room == currentRoom) {
+            room = new Room();
+            System.out.println("Quiz Arena room reset!");
+        }
+    }
+});
         // GET FINAL RESULTS
         server.createContext("/api/results", exchange -> {
 
