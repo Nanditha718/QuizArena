@@ -5,20 +5,19 @@ import java.nio.file.*;
 import java.nio.charset.StandardCharsets;
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.*;
 
 public class QuizServer {
 
     static class Room {
         List<String> players = new ArrayList<>();
         Set<String> departed = new HashSet<>();
-        Set<String> resultsViewed = new HashSet<>();
-        Map<String, Integer> scores = new ConcurrentHashMap<>();
-        Map<String, Long> times = new ConcurrentHashMap<>();
+        Map<String, Integer> scores = new HashMap<>();
+        Map<String, Long> times = new HashMap<>();
         boolean started = false;
     }
 
-    static volatile Room room = new Room();
+    static final Object LOCK = new Object();
+    static Room room = new Room();
 
     public static void main(String[] args) throws Exception {
 
@@ -38,10 +37,8 @@ public class QuizServer {
 
             boolean success = false;
             String message = "";
-            int playerCount;
-            boolean started;
 
-            synchronized (room) {
+            synchronized (LOCK) {
 
                 if (name.isEmpty()) {
                     message = "Please enter a player name.";
@@ -49,9 +46,8 @@ public class QuizServer {
                 } else if (room.players.size() >= 2) {
                     message = "The game is full.";
 
-                } else if (!room.scores.isEmpty()
-                        || !room.departed.isEmpty()) {
-                    message = "The previous game has not finished resetting.";
+                } else if (!room.scores.isEmpty()) {
+                    message = "Previous game is still finishing.";
 
                 } else if (room.players.contains(name)) {
                     message = "This player name is already used.";
@@ -65,32 +61,26 @@ public class QuizServer {
                     }
                 }
 
-                playerCount = room.players.size();
-                started = room.started;
+                sendJson(exchange,
+                    "{\"success\":" + success
+                    + ",\"playerCount\":" + room.players.size()
+                    + ",\"started\":" + room.started
+                    + ",\"message\":\"" + jsonEscape(message) + "\"}"
+                );
             }
-
-            String response =
-                "{\"success\":" + success
-                + ",\"playerCount\":" + playerCount
-                + ",\"started\":" + started
-                + ",\"message\":\"" + jsonEscape(message) + "\"}";
-
-            sendJson(exchange, response);
         });
 
         // CHECK GAME STATUS
         server.createContext("/api/status", exchange -> {
 
-            String response;
+            synchronized (LOCK) {
 
-            synchronized (room) {
-                response =
+                sendJson(exchange,
                     "{\"playerCount\":" + room.players.size()
                     + ",\"players\":" + toJson(room.players)
-                    + ",\"started\":" + room.started + "}";
+                    + ",\"started\":" + room.started + "}"
+                );
             }
-
-            sendJson(exchange, response);
         });
 
         // SUBMIT PLAYER SCORE
@@ -98,7 +88,7 @@ public class QuizServer {
 
             Map<String, String> data = readForm(exchange);
 
-            String name = data.getOrDefault("playerName", "");
+            String name = data.getOrDefault("playerName", "").trim();
 
             int playerScore = Integer.parseInt(
                 data.getOrDefault("score", "0")
@@ -109,76 +99,97 @@ public class QuizServer {
             );
 
             boolean success = false;
+            String message;
 
-            synchronized (room) {
+            synchronized (LOCK) {
 
-                if (room.started && room.players.contains(name)) {
+                if (!room.started) {
+                    message = "Game has not started.";
+
+                } else if (!room.players.contains(name)) {
+                    message = "Player not found.";
+
+                } else {
                     room.scores.put(name, playerScore);
                     room.times.put(name, playerTime);
-                    success = true;
-                }
-            }
 
-            sendJson(exchange, "{\"success\":" + success + "}");
+                    success = true;
+                    message = "Score received.";
+                }
+
+                System.out.println(
+                    "FINISH: " + name
+                    + " | Scores received: " + room.scores.size()
+                    + " | Players: " + room.players
+                );
+
+                sendJson(exchange,
+                    "{\"success\":" + success
+                    + ",\"message\":\"" + jsonEscape(message) + "\"}"
+                );
+            }
         });
 
-        // GET FINAL RESULTS AND AUTOMATICALLY RESET ROOM
+        // GET FINAL RESULTS
         server.createContext("/api/results", exchange -> {
 
-            Map<String, String> data = readForm(exchange);
-            String name = data.getOrDefault("playerName", "");
+            synchronized (LOCK) {
 
-            synchronized (room) {
-
-                Room currentRoom = room;
-
-                if (currentRoom.scores.size() < 2
-                        || !currentRoom.players.contains(name)) {
+                if (room.scores.size() < 2) {
                     sendJson(exchange, "{\"ready\":false}");
                     return;
                 }
 
                 StringBuilder result = new StringBuilder();
+
                 result.append("{\"ready\":true,\"players\":[");
 
                 boolean first = true;
 
-                for (String player : currentRoom.players) {
+                for (String name : room.players) {
 
-                    if (!first) result.append(",");
+                    if (!first) {
+                        result.append(",");
+                    }
+
                     first = false;
 
                     result.append("{\"name\":\"")
-                        .append(jsonEscape(player))
+                        .append(jsonEscape(name))
                         .append("\",\"score\":")
-                        .append(currentRoom.scores.get(player))
+                        .append(room.scores.get(name))
                         .append(",\"time\":")
-                        .append(currentRoom.times.get(player))
+                        .append(room.times.get(name))
                         .append("}");
                 }
 
                 result.append("]}");
 
-                currentRoom.resultsViewed.add(name);
-
-                boolean resetRoom =
-                    currentRoom.resultsViewed.containsAll(
-                        currentRoom.players
-                    );
-
                 sendJson(exchange, result.toString());
-
-                if (resetRoom && room == currentRoom) {
-                    room = new Room();
-                    System.out.println("Quiz Arena room reset!");
-                }
             }
         });
 
         // PLAYER RETURNS HOME
         server.createContext("/api/leave", exchange -> {
 
-            sendJson(exchange, "{\"success\":true}");
+            Map<String, String> data = readForm(exchange);
+            String name = data.getOrDefault("playerName", "").trim();
+
+            synchronized (LOCK) {
+
+                if (room.players.contains(name)) {
+                    room.departed.add(name);
+                }
+
+                if (room.players.size() == 2
+                        && room.departed.size() == 2) {
+
+                    System.out.println("Both players left. Resetting room.");
+                    room = new Room();
+                }
+
+                sendJson(exchange, "{\"success\":true}");
+            }
         });
 
         // SERVE WEBSITE FILES
@@ -201,8 +212,9 @@ public class QuizServer {
                 return;
             }
 
-            String type = "text/html";
+            String type = "application/octet-stream";
 
+            if (path.endsWith(".html")) type = "text/html";
             if (path.endsWith(".css")) type = "text/css";
             if (path.endsWith(".js")) type = "application/javascript";
             if (path.endsWith(".json")) type = "application/json";
@@ -223,9 +235,10 @@ public class QuizServer {
         server.start();
 
         System.out.println("Quiz Arena Server Started!");
-        System.out.println("Open http://localhost:8080");
+        System.out.println("Server running on port " + port);
     }
 
+    // READ FORM DATA
     static Map<String, String> readForm(HttpExchange exchange)
             throws IOException {
 
@@ -251,6 +264,7 @@ public class QuizServer {
         return data;
     }
 
+    // CONVERT PLAYERS TO JSON
     static String toJson(List<String> players) {
 
         StringJoiner result = new StringJoiner(",", "[", "]");
@@ -262,6 +276,7 @@ public class QuizServer {
         return result.toString();
     }
 
+    // ESCAPE JSON TEXT
     static String jsonEscape(String value) {
 
         return value
@@ -271,7 +286,9 @@ public class QuizServer {
             .replace("\r", "\\r");
     }
 
-    static void sendJson(HttpExchange exchange, String response)
+    // SEND JSON RESPONSE
+    static void sendJson(
+            HttpExchange exchange, String response)
             throws IOException {
 
         byte[] data = response.getBytes(StandardCharsets.UTF_8);
