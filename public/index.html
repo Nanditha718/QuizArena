@@ -4,26 +4,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Quiz Arena</title>
 
-    <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#20294a">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
 </head>
+
 <body>
 
 <div class="container">
 
+    <!-- NAVIGATION -->
     <nav>
         <h2>⚡ QUIZ ARENA</h2>
         <span>Two Player Challenge</span>
     </nav>
 
+    <!-- HOME SCREEN -->
     <main id="homeScreen">
         <div class="hero">
             <p class="tag">THE ULTIMATE QUIZ BATTLE</p>
-            <h1>Think Fast.<br><span>Play Smart.</span></h1>
+
+            <h1>
+                Think Fast.<br>
+                <span>Play Smart.</span>
+            </h1>
 
             <p class="description">
                 Challenge another player, test your knowledge
@@ -36,6 +43,7 @@
         </div>
 
         <div class="info">
+
             <div class="info-card">
                 <h2>👥</h2>
                 <h3>2 Players</h3>
@@ -53,17 +61,19 @@
                 <h3>Leaderboard</h3>
                 <p>Claim the top spot</p>
             </div>
+
         </div>
     </main>
 
-
     <!-- REGISTRATION SCREEN -->
-
     <main id="registrationScreen" hidden>
-        <div class="hero">
 
+        <div class="hero">
             <p class="tag">PLAYER REGISTRATION</p>
-            <h1>Join the <span>Battle</span></h1>
+
+            <h1>
+                Join the <span>Battle</span>
+            </h1>
 
             <p class="description">
                 Enter your player name to join the quiz.
@@ -76,6 +86,7 @@
                     id="playerName"
                     placeholder="Enter your player name"
                     maxlength="20"
+                    autocomplete="off"
                 >
 
                 <button onclick="registerPlayer()">
@@ -92,19 +103,21 @@
         </div>
     </main>
 
-
     <!-- WAITING SCREEN -->
-
     <main id="waitingScreen" hidden>
-        <div class="hero">
 
+        <div class="hero">
             <p class="tag">PLAYER WAITING AREA</p>
-            <h1>Waiting for <span>Player 2</span></h1>
+
+            <h1>
+                Waiting for <span>Player 2</span>
+            </h1>
 
             <div class="registration-box">
 
                 <h2>
-                    Welcome, <span id="waitingName">Player</span>!
+                    Welcome,
+                    <span id="waitingName">Player</span>!
                 </h2>
 
                 <p class="description">
@@ -119,21 +132,29 @@
         </div>
     </main>
 
-
     <!-- QUIZ SCREEN -->
-
     <main id="quizScreen" hidden>
-        <div class="hero">
 
+        <div class="hero">
             <p class="tag">QUIZ IN PROGRESS</p>
-            <h1>Quiz <span>Challenge</span></h1>
+
+            <h1>
+                Quiz <span>Challenge</span>
+            </h1>
 
             <div class="registration-box">
 
                 <div class="quiz-info">
-                    <p>Question <span id="questionNumber">1</span>/5</p>
+
+                    <p>
+                        Question
+                        <span id="questionNumber">1</span>/5
+                    </p>
+
                     <h2 id="timer">30</h2>
+
                     <p>Seconds Remaining</p>
+
                 </div>
 
                 <h2 id="questionText">
@@ -141,10 +162,12 @@
                 </h2>
 
                 <div id="answerOptions">
+
                     <button class="answer-option">Option A</button>
                     <button class="answer-option">Option B</button>
                     <button class="answer-option">Option C</button>
                     <button class="answer-option">Option D</button>
+
                 </div>
 
                 <p id="quizMessage"></p>
@@ -153,36 +176,44 @@
         </div>
     </main>
 
-
     <!-- LEADERBOARD SCREEN -->
-
     <main id="leaderboardScreen" hidden>
-        <div class="hero">
 
+        <div class="hero">
             <p class="tag">FINAL RESULTS</p>
-            <h1>Quiz <span>Leaderboard</span></h1>
+
+            <h1>
+                Quiz <span>Leaderboard</span>
+            </h1>
 
             <div class="registration-box">
 
                 <h2 id="winnerName">Winner</h2>
-                <p id="winnerMessage">Congratulations!</p>
+
+                <p id="winnerMessage">
+                    Congratulations!
+                </p>
 
                 <h2>Player Scores</h2>
 
                 <div id="leaderboardList"></div>
 
+                <button onclick="leaveGameAndGoHome()">
+                    PLAY AGAIN →
+                </button>
+
             </div>
         </div>
     </main>
 
-
+    <!-- FOOTER -->
     <footer>
         © 2026 Quiz Arena | Ready for the challenge?
     </footer>
 
 </div>
 
-<script src="script.js"></script>
+<script src="/script.js"></script>
 
 </body>
 </html>
